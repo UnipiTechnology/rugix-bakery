@@ -3,7 +3,7 @@
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::fs;
-use std::io::{Read, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::ops::Deref;
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -78,6 +78,36 @@ impl Logger {
             .push_line(String::from_utf8_lossy(&state.line_buffer).into_owned());
         state.line_buffer.clear();
     }
+}
+
+/// Reads up to `max_lines` trailing lines from a file without loading the whole
+/// file into memory.
+fn read_log_tail(path: &Path, max_lines: usize) -> std::io::Result<String> {
+    const WINDOW: u64 = 64 * 1024;
+    let mut file = fs::File::open(path)?;
+    let length = file.metadata()?.len();
+    let mut start = length;
+    let mut buffer = Vec::new();
+    loop {
+        let chunk = WINDOW.min(start);
+        start -= chunk;
+        file.seek(SeekFrom::Start(start))?;
+        let mut block = vec![0u8; chunk as usize];
+        file.read_exact(&mut block)?;
+        block.extend_from_slice(&buffer);
+        buffer = block;
+        if start == 0 || buffer.iter().filter(|byte| **byte == b'\n').count() > max_lines {
+            break;
+        }
+    }
+    let text = String::from_utf8_lossy(&buffer);
+    let lines = text.lines().collect::<Vec<_>>();
+    let tail = if lines.len() > max_lines {
+        &lines[lines.len() - max_lines..]
+    } else {
+        &lines[..]
+    };
+    Ok(tail.join("\n"))
 }
 
 pub fn customize(
@@ -216,10 +246,14 @@ fn customize_recipes(
         &root_dir,
         source_date_epoch,
     ) {
-        let last_lines = logger.current_lines();
-
-        cli_msg!("Log: {:?}", layer_path.join("build.log"));
-        for line in last_lines.lines() {
+        // `build.log` captures the full output of every command, including
+        // command *stdout*. `xscript`'s error only carries stderr, and the CLI
+        // status buffer is capped, so print the log tail here instead to make
+        // failures (e.g. dpkg errors reported by apt on stdout) visible.
+        let log_path = layer_path.join("build.log");
+        cli_msg!("Log: {:?}", log_path);
+        let tail = read_log_tail(&log_path, 200).unwrap_or_else(|_| logger.current_lines());
+        for line in tail.lines() {
             cli_msg!("> {line}")
         }
 
