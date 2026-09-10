@@ -14,7 +14,7 @@ use rugix_cli::{cli_msg, StatusSegmentRef};
 use rugix_common::mount::{MountStack, Mounted};
 use tempfile::tempdir;
 use tracing::{error, info};
-use xscript::{cmd, vars, Cmd, ParentEnv, Run};
+use xscript::{cmd, vars, Cmd};
 
 use crate::cli::status::CliLog;
 use crate::config::layers::LayerConfig;
@@ -505,12 +505,14 @@ fn apply_recipes(
                             }
                         };
                         cmd.extend_args(packages);
-                        ParentEnv
-                            .run(cmd.with_vars(vars! {
+                        run_cmd(
+                            logger,
+                            cmd.with_vars(vars! {
                                 DEBIAN_FRONTEND = "noninteractive",
                                 SOURCE_DATE_EPOCH = source_date_epoch.to_string(),
-                            }))
-                            .whatever("unable to install packages")?;
+                            }),
+                        )
+                        .whatever("unable to install packages")?;
                     }
                 }
                 StepKind::Install => {
