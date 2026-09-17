@@ -17,6 +17,7 @@ RUN apt-get -y update \
         libcap2-bin \
         mmdebstrap \
         mtools \
+        pigz \
         proot \
         python3 \
         python3-venv \
