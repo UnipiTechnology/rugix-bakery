@@ -29,6 +29,7 @@ pub mod system;
 pub mod targets;
 
 mod archive;
+mod generic_manifest;
 
 /// Parameter overrides loaded from parameter files.
 ///
@@ -485,6 +486,17 @@ pub fn bake_bundle(
     let bundle_dir = tempdir().whatever("unable to create temporary directory")?;
     let bundle_dir = bundle_dir.path();
     let system_config = project.config().resolve_system_config(system)?;
+    bake_rugix_bundle(bundle_dir, system_config, system_path, output, opts)
+}
+
+
+pub fn bake_rugix_bundle(
+    bundle_dir: &Path,
+    system_config: &SystemConfig,
+    system_path: &Path,
+    output: &Path,
+    opts: &BundleOpts,
+) -> BakeryResult<si_crypto_hashes::HashDigest> {
     let is_gpt = system_config
         .image
         .as_ref()

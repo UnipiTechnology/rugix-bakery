@@ -69,6 +69,8 @@ record BspPartition {
     root?: string,
     /// Mark the partition bootable.
     bootable?: bool,
+    /// Update system slot - rootfs, appfs/data
+    slot?: string,
 }
 
 /// Bundle payload mapping.

@@ -36,7 +36,7 @@ use crate::utils::caching::mtime;
 use crate::BakeryResult;
 
 use super::archive;
-use super::layer::FrozenLayer;
+use super::generic_manifest;use super::layer::FrozenLayer;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ReleaseInfo {
@@ -196,6 +196,7 @@ pub fn make_system(
     }
 
     // At this point, everything is initialized and we can compute the partition table.
+    let mut bsp_config: Option<BspConfig> = None;
     let layout = config
         .image
         .as_ref()
@@ -205,7 +206,9 @@ pub fn make_system(
                 Target::Bsp => {
                     let bsp = load_bsp_config(&layer_path.join("bsp/rugix-bsp.toml"))
                         .expect("unable to load BSP config");
-                    Some(bsp_to_image_layout(&bsp).expect("invalid BSP layout"))
+                    let layout = bsp_to_image_layout(&bsp).expect("invalid BSP layout");
+                    bsp_config = Some(bsp);
+                    Some(layout)
                 }
                 _ => targets::get_default_layout(
                     target,
@@ -408,6 +411,20 @@ pub fn make_system(
         &serde_json::to_string_pretty(&system_info).unwrap(),
     )
     .whatever("unable to write `system-build-info.json`")?;
+
+    // Emit the generic build manifest describing the assembled system.
+    if let Some(bsp) = &bsp_config {
+        generic_manifest::emit_generic_manifest(
+            config,
+            &system_info,
+            bsp,
+            &table,
+            out,
+        )
+        .whatever("unable to emit generic manifest")?;
+    } else if matches!(config.target, Some(Target::Bsp)) {
+        warn!("system uses an explicit image layout; skipping generic manifest emission");
+    }
 
     Ok(())
 }
