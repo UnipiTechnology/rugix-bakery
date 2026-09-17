@@ -230,6 +230,16 @@
       ],
       "description": "Architecture."
     },
+    "rugix_bakery.systems.BundleFormat": {
+      "enum": [
+        {
+          "tag": "Rugix"
+        },
+        {
+          "tag": "Generic"
+        }
+      ]
+    },
     "rugix_bakery.systems.SystemConfig": {
       "type": "object",
       "properties": {
@@ -279,6 +289,9 @@
       "properties": {
         "use-squashfs": {
           "$ref": "#/$defs/rugix_bakery.images.SquashfsOptions"
+        },
+        "bundle-format": {
+          "$ref": "#/$defs/rugix_bakery.systems.BundleFormat"
         }
       },
       "required": [],

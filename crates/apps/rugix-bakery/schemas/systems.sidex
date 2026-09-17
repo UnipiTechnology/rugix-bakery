@@ -43,6 +43,7 @@ variant Architecture {
 
 /// Target.
 #[json(tagged=externally, rename_all = "kebab-case")]
+#[rust(derive(Copy, PartialEq, Eq, Hash))]
 variant Target {
     /// Generic target for EFI-compatible systems.
     GenericGrubEfi,
