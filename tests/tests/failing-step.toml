@@ -1,0 +1,11 @@
+[[systems]]
+system = "efi"
+ssh = { private-key = ".rugix-testkit/id_rsa" }
+
+[[steps]]
+action = "run"
+description = "fail with a distinctive exit code"
+script = """
+#!/bin/bash
+exit 42
+"""
