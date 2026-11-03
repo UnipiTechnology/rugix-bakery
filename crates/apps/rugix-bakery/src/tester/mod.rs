@@ -41,9 +41,9 @@ pub fn main(
             &system.system,
             &system_out,
             None,
-            param_overrides,
+            param_overrides.clone(),
             &Default::default(),
-            None,
+            false,
         )
         .whatever("error baking system")?;
 

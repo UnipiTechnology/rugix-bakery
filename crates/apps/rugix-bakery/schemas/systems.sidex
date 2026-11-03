@@ -17,6 +17,9 @@ record SystemConfig {
     image?: SystemImageConfig,
     /// Repository-defined image assembly, receiving the existing layer build.
     build?: RuleInvocation,
+    /// Repository-defined bundle generation, built by bake bundle in place of the default rugix bundle.
+    /// Uses assembly outputs
+    bundle?: RuleInvocation,
     /// Additional options.
     options?: SystemOptions,
 }

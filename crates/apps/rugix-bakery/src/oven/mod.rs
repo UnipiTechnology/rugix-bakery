@@ -3,10 +3,10 @@
 use crate::build::{Artifact, ExecutionContext, Executor, Planner};
 use sidex::types::Str;
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::fmt::Display;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use clap::Args;
 use reportify::{bail, whatever, ResultExt};
 use rugix_bundle::manifest::{self, BundleManifest, ChunkerAlgorithm};
 use rugix_common::img_extract::extract_image_partitions;
@@ -72,10 +72,10 @@ pub fn bake_system(
     system: &str,
     output: &Path,
     source_date_epoch: Option<u64>,
-    param_overrides: &ParameterOverrides,
+    mut param_overrides: ParameterOverrides,
     mixin_selection: &MixinSelection,
-    bundle_options: Option<&BundleOpts>,
-) -> BakeryResult<()> {
+    bundle: bool,
+) -> BakeryResult<Option<sidex::types::Str>> {
     let context = ExecutionContext::resolve(source_date_epoch)?;
     let system_config = project
         .config()
@@ -88,9 +88,17 @@ pub fn bake_system(
     {
         bail!("repository-defined builds cannot be combined with target, image, or options; configure the assembly rule instead");
     }
+
+    let bundle_params: HashMap<String, ParameterValue> = match (&system_config.bundle, bundle) {
+        (Some(invocation), true) => param_overrides
+            .remove(invocation.uses.as_str())
+            .unwrap_or_default(),
+        _ => HashMap::new(),
+    };
+
     info!("baking image `{system}`");
-    let layer_bakery = LayerBakery::new(project, system_config.architecture, param_overrides);
-    let mut planner = Planner::new(project.repositories()?)?.with_layers(project, param_overrides);
+    let layer_bakery = LayerBakery::new(project, system_config.architecture, &param_overrides);
+    let mut planner = Planner::new(project.repositories()?)?.with_layers(project, &param_overrides);
     let baked_layer =
         layer_bakery.plan_system_layer(&mut planner, system_config, mixin_selection)?;
     build::assemble(
@@ -98,7 +106,8 @@ pub fn bake_system(
         planner,
         baked_layer,
         system_config,
-        bundle_options,
+        bundle,
+        bundle_params,
         release_info,
         system,
         output,
@@ -361,50 +370,69 @@ pub(crate) fn extract(
     Ok(())
 }
 
-/// Bundle options.
-#[derive(Args, Clone, Debug)]
-pub struct BundleOpts {
-    /// Disable compression of the bundle.
-    #[clap(long)]
-    disable_compression: bool,
-    /// Use a specific chunking algorithm.
-    #[clap(long)]
-    chunker: Option<ChunkerAlgorithm>,
+pub enum BakedBundle {
+    Rugix(si_crypto_hashes::HashDigest),
+    Declared { file: PathBuf, sha256: String },
 }
 
-impl BundleOpts {
-    pub fn chunker_algorithm(&self) -> ChunkerAlgorithm {
-        self.chunker.clone().unwrap_or(ChunkerAlgorithm::Casync {
-            avg_block_size_kib: 64,
-        })
+impl Display for BakedBundle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BakedBundle::Rugix(hash_digest) => write!(f, "{hash_digest}"),
+            BakedBundle::Declared { file, sha256 } => write!(
+                f,
+                "{sha256}: {}",
+                file.to_str().unwrap_or("non unicode file path")
+            ),
+        }
     }
 }
 
 pub fn bake_bundle(
-    project: &ProjectRef,
-    system: &str,
     system_path: &Path,
-    output: &Path,
-    opts: &BundleOpts,
-) -> BakeryResult<si_crypto_hashes::HashDigest> {
-    let system_config = project.config().resolve_system_config(system)?;
-    if system_config.build.is_some() && (opts.disable_compression || opts.chunker.is_some()) {
-        bail!("configure bundle encoding through the repository-defined assembly rule");
+    output: Option<&PathBuf>,
+    declared: Option<&str>,
+) -> BakeryResult<BakedBundle> {
+    if let Some(name) = declared {
+        let file = system_path.join(name);
+        if !file.is_file() {
+            bail!("declared bundle {name:?} missing from {system_path:?}");
+        }
+        if let Some(target) = output {
+            crate::build::copy_file(&file, target)?;
+        }
+        let sha256 = sha256_file(&file)?;
+        return Ok(BakedBundle::Declared { file, sha256 });
     }
     let source = system_path.join("system.rugixb");
     if !source.is_file() {
         bail!("system assembly did not export a bundle artifact");
     }
-    crate::build::copy_file(&source, output)?;
-    rugix_bundle::bundle_hash(output).whatever("unable to hash assembled update bundle")
+    let output = output
+        .cloned()
+        .unwrap_or_else(|| system_path.join("system.rugixb"));
+    crate::build::copy_file(&source, &output)?;
+    let hash =
+        rugix_bundle::bundle_hash(&output).whatever("unable to hash assembled update bundle")?;
+    let hash_output = output.with_extension("rugixb-hash");
+    std::fs::write(&hash_output, hash.to_string()).whatever("unable to write bundle hash")?;
+
+    Ok(BakedBundle::Rugix(hash))
+}
+
+fn sha256_file(file: &Path) -> BakeryResult<String> {
+    use sha2::Digest;
+    let mut file = fs::File::open(file).whatever("unable to open bundle")?;
+    let mut hasher = sha2::Sha256::new();
+    std::io::copy(&mut file, &mut hasher).whatever("unable to hash bundle")?;
+    Ok(hex::encode(hasher.finalize()))
 }
 
 /// Standard boot and system payloads differ only in the system partition number.
-fn standard_bundle_config(opts: &BundleOpts, system_partition: u32) -> BundleManifest {
-    let compression = if opts.disable_compression {
-        None
-    } else {
-        Some(manifest::Compression::Xz(manifest::XzCompression::new()))
+fn standard_bundle_config(system_partition: u32) -> BundleManifest {
+    let compression = Some(manifest::Compression::Xz(manifest::XzCompression::new()));
+    let chunker = ChunkerAlgorithm::Casync {
+        avg_block_size_kib: 64,
     };
     let payloads = [("boot", 2), ("system", system_partition)]
         .into_iter()
@@ -414,7 +442,7 @@ fn standard_bundle_config(opts: &BundleOpts, system_partition: u32) -> BundleMan
                 format!("partition-{partition}.img"),
             )
             .with_block_encoding(Some(
-                manifest::BlockEncoding::new(opts.chunker_algorithm())
+                manifest::BlockEncoding::new(chunker.clone())
                     .with_deduplicate(Some(true))
                     .with_compression(compression.clone()),
             ))
@@ -423,7 +451,7 @@ fn standard_bundle_config(opts: &BundleOpts, system_partition: u32) -> BundleMan
     manifest::BundleManifest::new(manifest::UpdateType::Full, payloads.into())
 }
 
-fn bsp_bundle_config(system_path: &Path, opts: &BundleOpts) -> BakeryResult<BundleManifest> {
+fn bsp_bundle_config(system_path: &Path) -> BakeryResult<BundleManifest> {
     use crate::config::bsp::BspConfig;
 
     let bsp_toml_path = system_path.join("bsp/rugix-bsp.toml");
@@ -437,10 +465,9 @@ fn bsp_bundle_config(system_path: &Path, opts: &BundleOpts) -> BakeryResult<Bund
         bail!("rugix-bsp.toml has no [[bundle.payloads]] entries");
     };
 
-    let compression = if opts.disable_compression {
-        None
-    } else {
-        Some(manifest::Compression::Xz(manifest::XzCompression::new()))
+    let compression = Some(manifest::Compression::Xz(manifest::XzCompression::new()));
+    let chunker = ChunkerAlgorithm::Casync {
+        avg_block_size_kib: 64,
     };
 
     let payloads = payloads_list
@@ -463,7 +490,7 @@ fn bsp_bundle_config(system_path: &Path, opts: &BundleOpts) -> BakeryResult<Bund
                 filename,
             )
             .with_block_encoding(Some(
-                manifest::BlockEncoding::new(opts.chunker_algorithm())
+                manifest::BlockEncoding::new(chunker.clone())
                     .with_deduplicate(Some(true))
                     .with_compression(compression.clone()),
             )))

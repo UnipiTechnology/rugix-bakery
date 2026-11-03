@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 import time
@@ -148,19 +149,10 @@ def test_standard_pipeline_rebuilds_and_reproduces(
 
 
 def test_standard_bundle_uses_graph_payloads(env_project: BakeryBuilder) -> None:
-    """Bundle construction uses the same filesystem artifacts and honors CLI encoding."""
+    """Bundle construction uses the same filesystem artifacts and default encoding."""
     project = env_project.project_dir
     prepare(project)
-    env_project.run(
-        [
-            "bake",
-            "bundle",
-            "device",
-            "--release-version",
-            "pipeline-test",
-            "--disable-compression",
-        ]
-    )
+    env_project.run(["bake", "bundle", "device", *RELEASE])
     output = project / "build/device"
     assert (output / "system.rugixb").is_file()
     assert (output / "system.rugixb-hash").is_file()
@@ -169,9 +161,7 @@ def test_standard_bundle_uses_graph_payloads(env_project: BakeryBuilder) -> None
     )
     assert (project / "fit-extracted").read_bytes() == b"signed-fit"
     # The public command also exports an already assembled bundle to another path.
-    env_project.run(
-        ["bake", "bundle", "device", "export.rugixb", "--disable-compression"]
-    )
+    env_project.run(["bake", "bundle", "device", "export.rugixb", *RELEASE])
     assert digest(project / "export.rugixb") == digest(output / "system.rugixb")
 
 
@@ -249,6 +239,135 @@ filesystem = { type = "ext4" }
     )
     env_project.run(["bake", "rule", "extract.toml", "build/extracted"])
     assert (project / "build/extracted/efi").read_bytes().startswith(b"MZ")
+
+
+BUNDLE_RULE = """description = "Fixture declared bundle rule."
+
+[inputs.context]
+kind = "file"
+
+[parameters.message]
+default = "unset"
+
+[execution]
+type = "run"
+command = ["/bin/sh", "-c", "cat /run/rugix/bakery/work/parameters.json /run/rugix/bakery/work/inputs/context > fixture.raucb"]
+
+[execution.outputs."fixture.raucb"]
+kind = "file"
+path = "fixture.raucb"
+"""
+
+
+def declare_bundle_rule(project: Path, rule: str = BUNDLE_RULE) -> Path:
+    """Reference a project rule as the `device` system's declared bundle rule."""
+    directory = project / "rules" / "bundle-marker"
+    directory.mkdir(parents=True)
+    (directory / "rule.toml").write_text(rule)
+    with (project / "rugix-bakery.toml").open("a") as config:
+        config.write('\n[systems.device.bundle]\nuses = "bundle-marker"\n')
+    return directory
+
+
+def test_system_declared_bundle_rule(
+    env_project: BakeryBuilder, capfd: pytest.CaptureFixture[str]
+) -> None:
+    """`bake bundle` runs the system-declared rule in place of the standard bundle."""
+    project = env_project.project_dir
+    prepare(project)
+    declare_bundle_rule(project)
+    output = project / "build/device"
+
+    # A plain image bake does not run the bundle rule.
+    env_project.run(["bake", "image", "device", *RELEASE])
+    assert not (output / "fixture.raucb").exists()
+
+    # A `--param-file` table keyed by the rule reference overrides a parameter.
+    params = project / "bundle-params.toml"
+    params.write_text('["bundle-marker"]\nmessage = "override"\n')
+    capfd.readouterr()
+    env_project.run(
+        ["bake", "bundle", "device", *RELEASE, "--param-file", "bundle-params.toml"]
+    )
+    bundle = output / "fixture.raucb"
+    assert bundle.is_file()
+    body = bundle.read_text()
+    assert '"message"' in body
+    assert '"override"' in body
+    assert "pipeline-test" in body
+    # The declared flow reports a sha256 and builds no Rugix Ctrl bundle.
+    assert re.search(r"[0-9a-f]{64}", capfd.readouterr().out)
+    assert not (output / "system.rugixb").exists()
+    assert not (output / "fixture.raucb-hash").exists()
+
+    # The command still exports the declared artifact to another path.
+    env_project.run(["bake", "bundle", "device", "exported.raucb", *RELEASE])
+    assert digest(project / "exported.raucb") == digest(bundle)
+
+    # Parameter names the rule does not declare are rejected.
+    params.write_text('["bundle-marker"]\nno-such-parameter = "flag"\n')
+    with pytest.raises(subprocess.CalledProcessError):
+        env_project.run(
+            ["bake", "bundle", "device", *RELEASE, "--param-file", "bundle-params.toml"]
+        )
+
+
+def test_declared_bundle_rule_output_contract(env_project: BakeryBuilder) -> None:
+    """Bundling rules must export exactly one file output with an unreserved name."""
+    project = env_project.project_dir
+    prepare(project)
+    directory = declare_bundle_rule(project)
+
+    header = '''description = "Contract fixture."
+
+[inputs.context]
+kind = "file"
+
+[execution]
+type = "run"
+command = ["/bin/sh", "-c", "true"]
+
+'''
+    two_outputs = header + """[execution.outputs.first]
+kind = "file"
+path = "first"
+
+[execution.outputs.second]
+kind = "file"
+path = "second"
+"""
+    reserved_output = header + """[execution.outputs.bundle]
+kind = "file"
+path = "bundle"
+"""
+    directory_output = header + """[execution.outputs.tree]
+kind = "directory"
+path = "tree"
+"""
+    for rule in (two_outputs, reserved_output, directory_output):
+        (directory / "rule.toml").write_text(rule)
+        with pytest.raises(subprocess.CalledProcessError):
+            env_project.run(["bake", "bundle", "device", *RELEASE])
+
+
+def test_rule_param_table_without_declared_rule_is_inert(
+    env_project: BakeryBuilder,
+) -> None:
+    """Rule-keyed `--param-file` tables stay unused when no bundle rule is declared."""
+    project = env_project.project_dir
+    prepare(project)
+    rule = project / "rules" / "bundle-marker"
+    rule.mkdir(parents=True)
+    (rule / "rule.toml").write_text(BUNDLE_RULE)
+    (project / "params.toml").write_text(
+        '["bundle-marker"]\nmessage = "unused"\n'
+    )
+    env_project.run(
+        ["bake", "bundle", "device", *RELEASE, "--param-file", "params.toml"]
+    )
+    output = project / "build/device"
+    assert (output / "system.rugixb").is_file()
+    assert not (output / "fixture.raucb").exists()
 
 
 def test_small_fat_partition_dereferences_boot_links(

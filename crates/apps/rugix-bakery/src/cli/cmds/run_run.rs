@@ -25,9 +25,9 @@ pub fn run(args: &args::Args, cmd: &args::RunCommand) -> BakeryResult<()> {
         &cmd.system,
         &output,
         None,
-        &param_overrides,
+        param_overrides.clone(),
         &cmd.mixins.selection(),
-        None,
+        false,
     )
     .whatever("error baking image")?;
 

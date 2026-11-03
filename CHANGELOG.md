@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Introduce system-declared bundle rules: a `bundle` rule invocation declared
+  for a system is executed by `bake bundle` in place of the standard Rugix Ctrl
+  bundling. Per-run rule parameters come from a `--param-file` table keyed by
+  the rule's reference. (Breaking: the `bake bundle` encoding flags
+  `--no-compression` and `--chunker` are gone — declare a bundle rule with its
+  own manifest to configure encoding.)
 - Introduce repository-defined build rules with artifact inputs and outputs,
   parameters, sensitive inputs, tooling environments, and reusable compositions.
 - Run existing layer, recipe, image, SBOM, and bundle builds through one executor

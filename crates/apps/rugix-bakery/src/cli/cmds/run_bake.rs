@@ -41,9 +41,9 @@ pub fn run(args: &args::Args, cmd: &args::BakeCommand) -> BakeryResult<()> {
                 system,
                 &system_path,
                 source_date_epoch,
-                &param_overrides,
+                param_overrides.clone(),
                 &mixins.selection(),
-                None,
+                false,
             )?;
             if let Some(output) = output {
                 crate::build::copy_file(&system_path.join("system.img"), output)?;
@@ -64,31 +64,29 @@ pub fn run(args: &args::Args, cmd: &args::BakeCommand) -> BakeryResult<()> {
             source_date,
             system,
             output,
-            opts,
             release,
             params,
             mixins,
         } => {
             let param_overrides = oven::load_parameter_overrides(&params.param_files)?;
             let system_path = Path::new("build").join(system);
-            oven::bake_system(
+            let declared = oven::bake_system(
                 &project,
                 &release.release_info(),
                 system,
                 &system_path,
                 source_epoch(source_date)?,
-                &param_overrides,
+                param_overrides.clone(),
                 &mixins.selection(),
-                Some(opts),
+                true,
             )?;
-            let output = output
-                .clone()
-                .unwrap_or_else(|| system_path.join("system.rugixb"));
-            let hash = oven::bake_bundle(&project, system, &system_path, &output, opts)?;
-            println!("{hash}");
-            let hash_output = output.with_extension("rugixb-hash");
-            std::fs::write(&hash_output, hash.to_string())
-                .whatever("unable to write bundle hash")?;
+
+            match oven::bake_bundle(&system_path, output.as_ref(), declared.as_deref())? {
+                oven::BakedBundle::Rugix(hash) => println!("{hash}"),
+                oven::BakedBundle::Declared { file, sha256 } => {
+                    println!("{sha256} {}", file.display())
+                }
+            };
         }
     }
     Ok(())

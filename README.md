@@ -41,6 +41,11 @@ environment. Compose them around existing layers and recipes to support custom
 platforms. Standard system configurations use the same rule engine. See the
 [layer input example](examples/layer-inputs) for a recipe that consumes a rule output.
 
+Systems can also declare a repository-defined `bundle` rule that `bake bundle`
+executes instead of the standard Rugix Ctrl bundling — for example, to produce
+RAUC or SWUpdate update bundles. Bundle encoding and parameters are configured
+through the rule and `--param-file`, not through command-line flags.
+
 ## Inspect Repository Building Blocks
 
 Rules, recipes, and layers carry descriptions and optional Markdown documentation.

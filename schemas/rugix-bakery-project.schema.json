@@ -445,6 +445,9 @@
         "build": {
           "$ref": "#/$defs/rugix_bakery.rules.RuleInvocation"
         },
+        "bundle": {
+          "$ref": "#/$defs/rugix_bakery.rules.RuleInvocation"
+        },
         "options": {
           "$ref": "#/$defs/rugix_bakery.systems.SystemOptions"
         }

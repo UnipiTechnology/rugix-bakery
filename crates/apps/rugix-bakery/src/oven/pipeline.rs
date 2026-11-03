@@ -19,13 +19,13 @@ use crate::config::systems::{SystemConfig, Target};
 use crate::project::repositories::ProjectRepositories;
 use crate::BakeryResult;
 
-use super::{system, targets, BundleOpts};
+use super::{system, targets};
 
 #[derive(Clone)]
 struct Pipeline {
     repositories: Arc<ProjectRepositories>,
     config: SystemConfig,
-    bundle: Option<BundleOpts>,
+    bundle: bool,
 }
 
 /// Append the predefined pipeline without executing layers outside the graph.
@@ -33,12 +33,12 @@ pub fn plan(
     planner: &mut Planner,
     inputs: BTreeMap<Str, Artifact>,
     config: &SystemConfig,
-    bundle: Option<&BundleOpts>,
+    bundle: bool,
 ) -> BTreeMap<Str, Artifact> {
     let pipeline = Pipeline {
         repositories: planner.repositories.clone(),
         config: config.clone(),
-        bundle: bundle.cloned(),
+        bundle,
     };
     let outputs = pipeline.output_kinds();
     planner.defer(inputs, outputs, move |inputs| {
@@ -57,7 +57,7 @@ impl Pipeline {
             ("sbom.spdx.json".into(), ArtifactKind::File),
             ("sbom.cdx.json".into(), ArtifactKind::File),
         ]);
-        if self.bundle.is_some() {
+        if self.bundle {
             outputs.insert("bundle".into(), ArtifactKind::File);
         }
         outputs
@@ -288,14 +288,14 @@ impl Pipeline {
             ("sbom.spdx.json".into(), sbom["spdx"].clone()),
             ("sbom.cdx.json".into(), sbom["cyclonedx"].clone()),
         ]);
-        if let Some(options) = &self.bundle {
+        if self.bundle {
             let target = self.config.target.as_ref().unwrap_or(&Target::Unknown);
             let manifest = match target {
-                Target::GenericGrubEfi => super::standard_bundle_config(options, 4),
+                Target::GenericGrubEfi => super::standard_bundle_config(4),
                 Target::RpiTryboot | Target::RpiUboot => {
-                    super::standard_bundle_config(options, if table.is_gpt() { 4 } else { 5 })
+                    super::standard_bundle_config(if table.is_gpt() { 4 } else { 5 })
                 }
-                Target::Bsp => super::bsp_bundle_config(paths["layer"].as_path(), options)?,
+                Target::Bsp => super::bsp_bundle_config(paths["layer"].as_path())?,
                 Target::Unknown => bail!("cannot bake bundles for unknown targets"),
             };
             let mut payloads = filesystems;

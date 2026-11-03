@@ -6,7 +6,7 @@ use clap::Parser;
 
 use crate::config::systems::Architecture;
 use crate::oven::system::ReleaseInfo;
-use crate::oven::{BundleOpts, MixinSelection};
+use crate::oven::MixinSelection;
 
 /// Command line arguments.
 #[derive(Debug, Parser)]
@@ -220,9 +220,6 @@ pub enum BakeCommand {
         source_date: Option<jiff::Timestamp>,
         system: String,
         output: Option<PathBuf>,
-        /// Disable compression of the bundle.
-        #[clap(flatten)]
-        opts: BundleOpts,
         #[clap(flatten)]
         release: ReleaseInfoArgs,
         #[clap(flatten)]

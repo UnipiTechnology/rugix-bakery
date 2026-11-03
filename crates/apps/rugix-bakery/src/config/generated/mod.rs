@@ -5452,36 +5452,7 @@ pub mod projects {
     }
     #[automatically_derived]
     impl ::sidex::Shaped for ProjectConfig {
-        const SHAPE: &'static ::sidex::Shape = &::sidex::Shape::new(
-            "::rugix_bakery::projects::ProjectConfig",
-            ::sidex::shape::ShapeKind::Record(::sidex::shape::RecordShape::new(&[
-                ::sidex::shape::FieldShape::new(
-                    "repositories",
-                    ::sidex::shape::shape_of::<
-                        ::sidex::types::Map<::sidex::types::Str, super::repositories::SourceConfig>,
-                    >,
-                )
-                .with_docs("Repositories imported into the project.\n")
-                .optional(),
-                ::sidex::shape::FieldShape::new(
-                    "patch",
-                    ::sidex::shape::shape_of::<
-                        ::sidex::types::Map<::sidex::types::Str, super::repositories::SourceConfig>,
-                    >,
-                )
-                .with_docs("Patch Git-sourced dependencies: maps the Git URL of any repository\n(root or transitive) to a replacement source. The original `dir` is\npreserved unless the replacement specifies its own.\n")
-                .optional(),
-                ::sidex::shape::FieldShape::new(
-                    "systems",
-                    ::sidex::shape::shape_of::<
-                        ::sidex::types::Map<::sidex::types::Str, super::systems::SystemConfig>,
-                    >,
-                )
-                .with_docs("System declarations.\n")
-                .optional(),
-            ])),
-        )
-        .with_docs("Project configuration.\n");
+        const SHAPE : & 'static :: sidex :: Shape = & :: sidex :: Shape :: new ("::rugix_bakery::projects::ProjectConfig" , :: sidex :: shape :: ShapeKind :: Record (:: sidex :: shape :: RecordShape :: new (& [:: sidex :: shape :: FieldShape :: new ("repositories" , :: sidex :: shape :: shape_of :: < :: sidex :: types :: Map < :: sidex :: types :: Str , super :: repositories :: SourceConfig , > > ,) . with_docs ("Repositories imported into the project.\n") . optional () , :: sidex :: shape :: FieldShape :: new ("patch" , :: sidex :: shape :: shape_of :: < :: sidex :: types :: Map < :: sidex :: types :: Str , super :: repositories :: SourceConfig , > > ,) . with_docs ("Patch Git-sourced dependencies: maps the Git URL of any repository\n(root or transitive) to a replacement source. The original `dir` is\npreserved unless the replacement specifies its own.\n") . optional () , :: sidex :: shape :: FieldShape :: new ("systems" , :: sidex :: shape :: shape_of :: < :: sidex :: types :: Map < :: sidex :: types :: Str , super :: systems :: SystemConfig , > > ,) . with_docs ("System declarations.\n") . optional ()]))) . with_docs ("Project configuration.\n") ;
     }
     #[automatically_derived]
     impl ::sidex::Encode for ProjectConfig {
@@ -9174,55 +9145,14 @@ pub mod systems {
         pub image: ::std::option::Option<SystemImageConfig>,
         #[doc = "Repository-defined image assembly, receiving the existing layer build.\n"]
         pub build: ::std::option::Option<super::rules::RuleInvocation>,
+        #[doc = "Repository-defined bundle generation, built by bake bundle in place of the default rugix bundle.\nUses assembly outputs\n"]
+        pub bundle: ::std::option::Option<super::rules::RuleInvocation>,
         #[doc = "Additional options.\n"]
         pub options: ::std::option::Option<SystemOptions>,
     }
     #[automatically_derived]
     impl ::sidex::Shaped for SystemConfig {
-        const SHAPE: &'static ::sidex::Shape = &::sidex::Shape::new(
-            "::rugix_bakery::systems::SystemConfig",
-            ::sidex::shape::ShapeKind::Record(::sidex::shape::RecordShape::new(&[
-                ::sidex::shape::FieldShape::new(
-                    "layer",
-                    ::sidex::shape::shape_of::<::sidex::types::Str>,
-                )
-                .with_docs("Layer the image is based on.\n"),
-                ::sidex::shape::FieldShape::new(
-                    "mixins",
-                    ::sidex::shape::shape_of::<::sidex::types::Seq<::sidex::types::Str>>,
-                )
-                .with_docs("Mixins enabled by default for the system.\n")
-                .optional(),
-                ::sidex::shape::FieldShape::new(
-                    "architecture",
-                    ::sidex::shape::shape_of::<Architecture>,
-                )
-                .with_docs("Architecture of the image.\n"),
-                ::sidex::shape::FieldShape::new("target", ::sidex::shape::shape_of::<Target>)
-                    .with_docs("Rugix Bakery target.\n")
-                    .optional(),
-                ::sidex::shape::FieldShape::new(
-                    "image",
-                    ::sidex::shape::shape_of::<SystemImageConfig>,
-                )
-                .with_docs("System image configuration.\n")
-                .optional(),
-                ::sidex::shape::FieldShape::new(
-                    "build",
-                    ::sidex::shape::shape_of::<super::rules::RuleInvocation>,
-                )
-                .with_docs(
-                    "Repository-defined image assembly, receiving the existing layer build.\n",
-                )
-                .optional(),
-                ::sidex::shape::FieldShape::new(
-                    "options",
-                    ::sidex::shape::shape_of::<SystemOptions>,
-                )
-                .with_docs("Additional options.\n")
-                .optional(),
-            ])),
-        );
+        const SHAPE : & 'static :: sidex :: Shape = & :: sidex :: Shape :: new ("::rugix_bakery::systems::SystemConfig" , :: sidex :: shape :: ShapeKind :: Record (:: sidex :: shape :: RecordShape :: new (& [:: sidex :: shape :: FieldShape :: new ("layer" , :: sidex :: shape :: shape_of :: < :: sidex :: types :: Str > ,) . with_docs ("Layer the image is based on.\n") , :: sidex :: shape :: FieldShape :: new ("mixins" , :: sidex :: shape :: shape_of :: < :: sidex :: types :: Seq < :: sidex :: types :: Str , > > ,) . with_docs ("Mixins enabled by default for the system.\n") . optional () , :: sidex :: shape :: FieldShape :: new ("architecture" , :: sidex :: shape :: shape_of :: < Architecture > ,) . with_docs ("Architecture of the image.\n") , :: sidex :: shape :: FieldShape :: new ("target" , :: sidex :: shape :: shape_of :: < Target > ,) . with_docs ("Rugix Bakery target.\n") . optional () , :: sidex :: shape :: FieldShape :: new ("image" , :: sidex :: shape :: shape_of :: < SystemImageConfig > ,) . with_docs ("System image configuration.\n") . optional () , :: sidex :: shape :: FieldShape :: new ("build" , :: sidex :: shape :: shape_of :: < super :: rules :: RuleInvocation > ,) . with_docs ("Repository-defined image assembly, receiving the existing layer build.\n") . optional () , :: sidex :: shape :: FieldShape :: new ("bundle" , :: sidex :: shape :: shape_of :: < super :: rules :: RuleInvocation > ,) . with_docs ("Repository-defined bundle generation, built by bake bundle in place of the default rugix bundle.\nUses assembly outputs\n") . optional () , :: sidex :: shape :: FieldShape :: new ("options" , :: sidex :: shape :: shape_of :: < SystemOptions > ,) . with_docs ("Additional options.\n") . optional ()]))) ;
     }
     #[automatically_derived]
     impl ::sidex::Encode for SystemConfig {
@@ -9257,6 +9187,10 @@ pub mod systems {
                     .as_ref()
                     .map(|value| ::sidex::Encode::encode(value)),
                 6usize => self
+                    .bundle
+                    .as_ref()
+                    .map(|value| ::sidex::Encode::encode(value)),
+                7usize => self
                     .options
                     .as_ref()
                     .map(|value| ::sidex::Encode::encode(value)),
@@ -9277,7 +9211,8 @@ pub mod systems {
             let mut __field_3 = ::std::option::Option::<Target>::None;
             let mut __field_4 = ::std::option::Option::<SystemImageConfig>::None;
             let mut __field_5 = ::std::option::Option::<super::rules::RuleInvocation>::None;
-            let mut __field_6 = ::std::option::Option::<SystemOptions>::None;
+            let mut __field_6 = ::std::option::Option::<super::rules::RuleInvocation>::None;
+            let mut __field_7 = ::std::option::Option::<SystemOptions>::None;
             decoder.record(<Self as ::sidex::Shaped>::SHAPE, &mut |index, decoder| {
                 match index {
                     0usize => {
@@ -9314,6 +9249,11 @@ pub mod systems {
                     }
                     6usize => {
                         __field_6 = ::std::option::Option::Some(
+                            <super::rules::RuleInvocation as ::sidex::Decode>::decode(decoder)?,
+                        )
+                    }
+                    7usize => {
+                        __field_7 = ::std::option::Option::Some(
                             <SystemOptions as ::sidex::Decode>::decode(decoder)?,
                         )
                     }
@@ -9330,7 +9270,8 @@ pub mod systems {
                 target: __field_3,
                 image: __field_4,
                 build: __field_5,
-                options: __field_6,
+                bundle: __field_6,
+                options: __field_7,
             })
         }
     }
@@ -9347,6 +9288,7 @@ pub mod systems {
                 target: ::std::default::Default::default(),
                 image: ::std::default::Default::default(),
                 build: ::std::default::Default::default(),
+                bundle: ::std::default::Default::default(),
                 options: ::std::default::Default::default(),
             }
         }
@@ -9423,6 +9365,22 @@ pub mod systems {
             build: ::std::option::Option<super::rules::RuleInvocation>,
         ) -> Self {
             self.build = build;
+            self
+        }
+        #[doc = "Sets the value of `bundle`."]
+        pub fn set_bundle(
+            &mut self,
+            bundle: ::std::option::Option<super::rules::RuleInvocation>,
+        ) -> &mut Self {
+            self.bundle = bundle;
+            self
+        }
+        #[doc = "Sets the value of `bundle`."]
+        pub fn with_bundle(
+            mut self,
+            bundle: ::std::option::Option<super::rules::RuleInvocation>,
+        ) -> Self {
+            self.bundle = bundle;
             self
         }
         #[doc = "Sets the value of `options`."]
