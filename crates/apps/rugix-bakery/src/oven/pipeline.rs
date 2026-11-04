@@ -54,9 +54,11 @@ impl Pipeline {
             ("artifacts".into(), ArtifactKind::Directory),
             ("bsp".into(), ArtifactKind::Directory),
             ("system-build-info.json".into(), ArtifactKind::File),
-            ("sbom.spdx.json".into(), ArtifactKind::File),
-            ("sbom.cdx.json".into(), ArtifactKind::File),
         ]);
+        if self.config.sbom.is_none() {
+            outputs.insert("sbom.spdx.json".into(), ArtifactKind::File);
+            outputs.insert("sbom.cdx.json".into(), ArtifactKind::File);
+        }
         if self.bundle {
             outputs.insert("bundle".into(), ArtifactKind::File);
         }
@@ -263,14 +265,6 @@ impl Pipeline {
             ]),
             BTreeMap::new(),
         )?;
-        let sbom = planner.core_rule(
-            "sbom",
-            BTreeMap::from([
-                ("tree".into(), inputs["rootfs"].clone()),
-                ("context".into(), inputs["context"].clone()),
-            ]),
-            BTreeMap::new(),
-        )?;
         let filesystem_tree = directory(filesystems.clone());
         let mut outputs = BTreeMap::from([
             ("image".into(), image["image"].clone()),
@@ -285,9 +279,19 @@ impl Pipeline {
                     ArtifactKind::File,
                 )?,
             ),
-            ("sbom.spdx.json".into(), sbom["spdx"].clone()),
-            ("sbom.cdx.json".into(), sbom["cyclonedx"].clone()),
         ]);
+        if self.config.sbom.is_none() {
+            let sbom = planner.core_rule(
+                "sbom",
+                BTreeMap::from([
+                    ("tree".into(), inputs["rootfs"].clone()),
+                    ("context".into(), inputs["context"].clone()),
+                ]),
+                BTreeMap::new(),
+            )?;
+            outputs.insert("sbom.spdx.json".into(), sbom["spdx"].clone());
+            outputs.insert("sbom.cdx.json".into(), sbom["cyclonedx"].clone());
+        }
         if self.bundle {
             let target = self.config.target.as_ref().unwrap_or(&Target::Unknown);
             let manifest = match target {

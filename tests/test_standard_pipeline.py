@@ -370,6 +370,88 @@ def test_rule_param_table_without_declared_rule_is_inert(
     assert not (output / "fixture.raucb").exists()
 
 
+SBOM_RULE = """description = "Fixture declared SBOM rule."
+
+[execution]
+type = "run"
+command = ["/bin/sh", "-c", "printf enriched > /run/rugix/bakery/work/outputs/sbom.cdx.json && printf none > /run/rugix/bakery/work/outputs/sbom.vex.json"]
+
+[execution.outputs."sbom.cdx.json"]
+kind = "file"
+path = "sbom.cdx.json"
+
+[execution.outputs."sbom.vex.json"]
+kind = "file"
+path = "sbom.vex.json"
+"""
+
+
+def declare_sbom_rule(project: Path, rule: str = SBOM_RULE) -> Path:
+    """Reference a project rule as the `device` system's declared SBOM rule."""
+    directory = project / "rules" / "sbom-marker"
+    directory.mkdir(parents=True)
+    (directory / "rule.toml").write_text(rule)
+    with (project / "rugix-bakery.toml").open("a") as config:
+        config.write('\n[systems.device.sbom]\nuses = "sbom-marker"\n')
+    return directory
+
+
+def test_system_declared_sbom_rule(env_project: BakeryBuilder) -> None:
+    """A system-declared SBOM rule replaces the standard SBOM node on every bake."""
+    project = env_project.project_dir
+    prepare(project)
+    declare_sbom_rule(project)
+    output = project / "build/device"
+
+    # The declared rule fires on the plain image path (always on).
+    env_project.run(["bake", "image", "device", *RELEASE])
+    assert (output / "sbom.cdx.json").read_text() == "enriched"
+    assert (output / "sbom.vex.json").read_text() == "none"
+    # The standard rule cannot have run: its outputs never exist.
+    assert not (output / "sbom.spdx.json").exists()
+
+    # …and equally on the bundle path; the standard bundle still builds.
+    env_project.run(["bake", "bundle", "device", *RELEASE])
+    assert (output / "sbom.cdx.json").read_text() == "enriched"
+    assert not (output / "sbom.spdx.json").exists()
+    assert (output / "system.rugixb").is_file()
+
+
+def test_declared_sbom_rule_output_contract(env_project: BakeryBuilder) -> None:
+    """Declared SBOM rules must export the canonical CycloneDX file, unreserved."""
+    project = env_project.project_dir
+    prepare(project)
+    directory = declare_sbom_rule(project)
+
+    header = '''description = "Contract fixture."
+
+[execution]
+type = "run"
+command = ["/bin/sh", "-c", "true"]
+
+'''
+    missing_cdx = header + """[execution.outputs."sbom.vex.json"]
+kind = "file"
+path = "sbom.vex.json"
+"""
+    directory_cdx = header + """[execution.outputs."sbom.cdx.json"]
+kind = "directory"
+path = "tree"
+"""
+    reserved_output = header + """[execution.outputs."sbom.cdx.json"]
+kind = "file"
+path = "cdx"
+
+[execution.outputs."image"]
+kind = "file"
+path = "image-copy"
+"""
+    for rule in (missing_cdx, directory_cdx, reserved_output):
+        (directory / "rule.toml").write_text(rule)
+        with pytest.raises(subprocess.CalledProcessError):
+            env_project.run(["bake", "image", "device", *RELEASE])
+
+
 def test_small_fat_partition_dereferences_boot_links(
     env_project: BakeryBuilder,
 ) -> None:

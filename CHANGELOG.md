@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Introduce system-declared SBOM rules: an `sbom` rule invocation declared for
+  a system replaces the standard SBOM generation during assembly, on `bake
+  image` and `bake bundle` alike. The rule receives the assembly outputs by
+  name, must export the canonical `sbom.cdx.json` file, and may add further
+  outputs (e.g. a VEX document), which are published alongside the build.
 - Introduce system-declared bundle rules: a `bundle` rule invocation declared
   for a system is executed by `bake bundle` in place of the standard Rugix Ctrl
   bundling. Per-run rule parameters come from a `--param-file` table keyed by

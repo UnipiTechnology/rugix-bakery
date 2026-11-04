@@ -20,6 +20,8 @@ record SystemConfig {
     /// Repository-defined bundle generation, built by bake bundle in place of the default rugix bundle.
     /// Uses assembly outputs
     bundle?: RuleInvocation,
+    /// Repository-defined SBOM generation, run during assembly in place of the standard SBOM rule.
+    sbom?: RuleInvocation,
     /// Additional options.
     options?: SystemOptions,
 }

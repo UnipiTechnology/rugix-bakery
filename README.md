@@ -46,6 +46,12 @@ executes instead of the standard Rugix Ctrl bundling — for example, to produce
 RAUC or SWUpdate update bundles. Bundle encoding and parameters are configured
 through the rule and `--param-file`, not through command-line flags.
 
+Likewise, a system's `sbom` rule invocation replaces the standard SBOM
+generation during assembly — for example, to emit an enriched, scanner-specific
+CycloneDX document instead of the built-in one. It must export the canonical
+`sbom.cdx.json` and may publish additional documents, such as a VEX, alongside
+the build.
+
 ## Inspect Repository Building Blocks
 
 Rules, recipes, and layers carry descriptions and optional Markdown documentation.

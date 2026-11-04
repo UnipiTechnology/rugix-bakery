@@ -48,6 +48,37 @@ pub fn assemble(
         bail!("assembly output build-context.json is reserved for release metadata");
     }
 
+    if let Some(invocation) = &config.sbom {
+        // A system-declared SBOM rule replaces the standard SBOM generation.
+        // It receives the assembly outputs and bake inputs by name and must
+        // export the canonical `sbom.cdx.json` file; its outputs are published
+        // alongside the assembly outputs.
+        let mut available = outputs.clone();
+        for (name, artifact) in &inputs {
+            available
+                .entry(name.clone())
+                .or_insert_with(|| artifact.clone());
+        }
+        let artifacts = planner.invocation(invocation, available)?;
+        let Some(cdx) = artifacts.get("sbom.cdx.json") else {
+            bail!("system-declared SBOM rule must export `sbom.cdx.json`");
+        };
+        if cdx.kind != ArtifactKind::File {
+            bail!("system-declared SBOM rule must export `sbom.cdx.json` as a file");
+        }
+        for (name, artifact) in &artifacts {
+            if matches!(
+                name.as_str(),
+                "image" | "bundle" | "build-context.json" | "system-build-info.json"
+            ) {
+                bail!("SBOM rule output {name:?} is reserved");
+            }
+            if outputs.insert(name.clone(), artifact.clone()).is_some() {
+                bail!("SBOM rule output {name:?} collides with an assembly output");
+            }
+        }
+    }
+
     let bundle_name = if bundle {
         if let Some(invocation) = &config.bundle {
             let mut invocation = invocation.clone();

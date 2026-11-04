@@ -9147,12 +9147,14 @@ pub mod systems {
         pub build: ::std::option::Option<super::rules::RuleInvocation>,
         #[doc = "Repository-defined bundle generation, built by bake bundle in place of the default rugix bundle.\nUses assembly outputs\n"]
         pub bundle: ::std::option::Option<super::rules::RuleInvocation>,
+        #[doc = "Repository-defined SBOM generation, run during assembly in place of the standard SBOM rule.\n"]
+        pub sbom: ::std::option::Option<super::rules::RuleInvocation>,
         #[doc = "Additional options.\n"]
         pub options: ::std::option::Option<SystemOptions>,
     }
     #[automatically_derived]
     impl ::sidex::Shaped for SystemConfig {
-        const SHAPE : & 'static :: sidex :: Shape = & :: sidex :: Shape :: new ("::rugix_bakery::systems::SystemConfig" , :: sidex :: shape :: ShapeKind :: Record (:: sidex :: shape :: RecordShape :: new (& [:: sidex :: shape :: FieldShape :: new ("layer" , :: sidex :: shape :: shape_of :: < :: sidex :: types :: Str > ,) . with_docs ("Layer the image is based on.\n") , :: sidex :: shape :: FieldShape :: new ("mixins" , :: sidex :: shape :: shape_of :: < :: sidex :: types :: Seq < :: sidex :: types :: Str , > > ,) . with_docs ("Mixins enabled by default for the system.\n") . optional () , :: sidex :: shape :: FieldShape :: new ("architecture" , :: sidex :: shape :: shape_of :: < Architecture > ,) . with_docs ("Architecture of the image.\n") , :: sidex :: shape :: FieldShape :: new ("target" , :: sidex :: shape :: shape_of :: < Target > ,) . with_docs ("Rugix Bakery target.\n") . optional () , :: sidex :: shape :: FieldShape :: new ("image" , :: sidex :: shape :: shape_of :: < SystemImageConfig > ,) . with_docs ("System image configuration.\n") . optional () , :: sidex :: shape :: FieldShape :: new ("build" , :: sidex :: shape :: shape_of :: < super :: rules :: RuleInvocation > ,) . with_docs ("Repository-defined image assembly, receiving the existing layer build.\n") . optional () , :: sidex :: shape :: FieldShape :: new ("bundle" , :: sidex :: shape :: shape_of :: < super :: rules :: RuleInvocation > ,) . with_docs ("Repository-defined bundle generation, built by bake bundle in place of the default rugix bundle.\nUses assembly outputs\n") . optional () , :: sidex :: shape :: FieldShape :: new ("options" , :: sidex :: shape :: shape_of :: < SystemOptions > ,) . with_docs ("Additional options.\n") . optional ()]))) ;
+        const SHAPE : & 'static :: sidex :: Shape = & :: sidex :: Shape :: new ("::rugix_bakery::systems::SystemConfig" , :: sidex :: shape :: ShapeKind :: Record (:: sidex :: shape :: RecordShape :: new (& [:: sidex :: shape :: FieldShape :: new ("layer" , :: sidex :: shape :: shape_of :: < :: sidex :: types :: Str > ,) . with_docs ("Layer the image is based on.\n") , :: sidex :: shape :: FieldShape :: new ("mixins" , :: sidex :: shape :: shape_of :: < :: sidex :: types :: Seq < :: sidex :: types :: Str , > > ,) . with_docs ("Mixins enabled by default for the system.\n") . optional () , :: sidex :: shape :: FieldShape :: new ("architecture" , :: sidex :: shape :: shape_of :: < Architecture > ,) . with_docs ("Architecture of the image.\n") , :: sidex :: shape :: FieldShape :: new ("target" , :: sidex :: shape :: shape_of :: < Target > ,) . with_docs ("Rugix Bakery target.\n") . optional () , :: sidex :: shape :: FieldShape :: new ("image" , :: sidex :: shape :: shape_of :: < SystemImageConfig > ,) . with_docs ("System image configuration.\n") . optional () , :: sidex :: shape :: FieldShape :: new ("build" , :: sidex :: shape :: shape_of :: < super :: rules :: RuleInvocation > ,) . with_docs ("Repository-defined image assembly, receiving the existing layer build.\n") . optional () , :: sidex :: shape :: FieldShape :: new ("bundle" , :: sidex :: shape :: shape_of :: < super :: rules :: RuleInvocation > ,) . with_docs ("Repository-defined bundle generation, built by bake bundle in place of the default rugix bundle.\nUses assembly outputs\n") . optional () , :: sidex :: shape :: FieldShape :: new ("sbom" , :: sidex :: shape :: shape_of :: < super :: rules :: RuleInvocation > ,) . with_docs ("Repository-defined SBOM generation, run during assembly in place of the standard SBOM rule.\n") . optional () , :: sidex :: shape :: FieldShape :: new ("options" , :: sidex :: shape :: shape_of :: < SystemOptions > ,) . with_docs ("Additional options.\n") . optional ()]))) ;
     }
     #[automatically_derived]
     impl ::sidex::Encode for SystemConfig {
@@ -9191,6 +9193,10 @@ pub mod systems {
                     .as_ref()
                     .map(|value| ::sidex::Encode::encode(value)),
                 7usize => self
+                    .sbom
+                    .as_ref()
+                    .map(|value| ::sidex::Encode::encode(value)),
+                8usize => self
                     .options
                     .as_ref()
                     .map(|value| ::sidex::Encode::encode(value)),
@@ -9212,7 +9218,8 @@ pub mod systems {
             let mut __field_4 = ::std::option::Option::<SystemImageConfig>::None;
             let mut __field_5 = ::std::option::Option::<super::rules::RuleInvocation>::None;
             let mut __field_6 = ::std::option::Option::<super::rules::RuleInvocation>::None;
-            let mut __field_7 = ::std::option::Option::<SystemOptions>::None;
+            let mut __field_7 = ::std::option::Option::<super::rules::RuleInvocation>::None;
+            let mut __field_8 = ::std::option::Option::<SystemOptions>::None;
             decoder.record(<Self as ::sidex::Shaped>::SHAPE, &mut |index, decoder| {
                 match index {
                     0usize => {
@@ -9254,6 +9261,11 @@ pub mod systems {
                     }
                     7usize => {
                         __field_7 = ::std::option::Option::Some(
+                            <super::rules::RuleInvocation as ::sidex::Decode>::decode(decoder)?,
+                        )
+                    }
+                    8usize => {
+                        __field_8 = ::std::option::Option::Some(
                             <SystemOptions as ::sidex::Decode>::decode(decoder)?,
                         )
                     }
@@ -9271,7 +9283,8 @@ pub mod systems {
                 image: __field_4,
                 build: __field_5,
                 bundle: __field_6,
-                options: __field_7,
+                sbom: __field_7,
+                options: __field_8,
             })
         }
     }
@@ -9289,6 +9302,7 @@ pub mod systems {
                 image: ::std::default::Default::default(),
                 build: ::std::default::Default::default(),
                 bundle: ::std::default::Default::default(),
+                sbom: ::std::default::Default::default(),
                 options: ::std::default::Default::default(),
             }
         }
@@ -9381,6 +9395,22 @@ pub mod systems {
             bundle: ::std::option::Option<super::rules::RuleInvocation>,
         ) -> Self {
             self.bundle = bundle;
+            self
+        }
+        #[doc = "Sets the value of `sbom`."]
+        pub fn set_sbom(
+            &mut self,
+            sbom: ::std::option::Option<super::rules::RuleInvocation>,
+        ) -> &mut Self {
+            self.sbom = sbom;
+            self
+        }
+        #[doc = "Sets the value of `sbom`."]
+        pub fn with_sbom(
+            mut self,
+            sbom: ::std::option::Option<super::rules::RuleInvocation>,
+        ) -> Self {
+            self.sbom = sbom;
             self
         }
         #[doc = "Sets the value of `options`."]
