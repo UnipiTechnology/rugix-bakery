@@ -524,6 +524,9 @@
             },
             "uses-source-date-epoch": {
               "type": "boolean"
+            },
+            "uses-cache-dir": {
+              "type": "boolean"
             }
           },
           "required": [
