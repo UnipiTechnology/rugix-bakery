@@ -2,7 +2,15 @@
 
 ## Unreleased
 
-## Version 0.9.6
+- Support external template repositories in `init`:
+  `init --template-repo <URL> [--template-rev <REV>] <template>` initializes a
+  project from a template declared in a `rugix-templates.toml` manifest at the
+  root of a Git repository, with an optional per-template `path`. Repositories
+  are cloned and updated under `.rugix/templates/`. Add `--template-dir <PATH>`
+  to initialize from a local directory without cloning, and list the templates
+  of an external source by omitting the template name.
+
++## Version 0.9.6
 
 - Add opt-in persistent rule cache directories through `uses-cache-dir` and
   `RUGIX_CACHE_DIR`.
@@ -12,7 +20,6 @@
   generation during package upgrades.
 - Add release preview and guarded tagging tasks, with automatic GitHub release
   publication after CI checks and system tests succeed.
-
 - Warn when automatic target emulation setup fails and include emulation guidance
   in subsequent layer build errors, while preserving the original failure.
 
