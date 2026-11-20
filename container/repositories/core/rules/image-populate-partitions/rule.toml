@@ -1,0 +1,23 @@
+description = "Populate numbered partition images for core/assemble-disk from an image layout and its roots."
+category = "Image Assembly"
+
+[inputs.layout]
+kind = "file"
+description = "Rugix ImageLayout definition in JSON or TOML — carries the per-partition filesystems, roots, and ext4 options."
+
+[inputs.image]
+kind = "file"
+description = "Unpopulated disk image (core/image-layout output) whose resolved partition table provides capacities and numbering."
+
+[inputs.roots]
+kind = "directory"
+description = "Prepared filesystem trees addressed by each partition root."
+
+[execution]
+type = "run"
+command = ["rugix-bakery", "internal", "exec-rule", "image-populate-partitions"]
+
+[execution.outputs.partitions]
+kind = "directory"
+path = "partitions"
+description = "Filesystem images named by their partition number, ready for core/assemble-disk (skips unpopulated and extended partitions)."
