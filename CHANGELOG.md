@@ -5,6 +5,8 @@
 - Support external template repositories in `init`, both git repos and local
   directories.
 - Replace the bundled `templates.toml` manifest with `rugix-templates.toml`.
+- Expose `core/image-populate-partitions` rule which populates partitions based
+  on a prepared image layout. The builtin pipeline adopts this rule as well.
 
 ## Version 0.9.6
 
